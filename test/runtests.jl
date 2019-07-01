@@ -124,14 +124,14 @@ function test_grids(T)
     # Does mapped_grid simplify?
     mg2 = mapped_grid(PeriodicEquispacedGrid(30, T(0), T(1)), m)
     @test typeof(mg2) <: PeriodicEquispacedGrid
-    @test leftendpoint(support(mg2)) ≈ T(2)
-    @test rightendpoint(support(mg2)) ≈ T(3)
+    @test infimum(support(mg2)) ≈ T(2)
+    @test supremum(support(mg2)) ≈ T(3)
 
     # Apply a second map and check whether everything simplified
     m2 = interval_map(T(2), T(3), T(4), T(5))
     mg3 = mapped_grid(mg1, m2)
-    @test leftendpoint(support(mg3)) ≈ T(4)
-    @test rightendpoint(support(mg3)) ≈ T(5)
+    @test infimum(support(mg3)) ≈ T(4)
+    @test supremum(support(mg3)) ≈ T(5)
     @test typeof(supergrid(mg3)) <: PeriodicEquispacedGrid
 
     # Scattered grid
@@ -254,6 +254,15 @@ function test_subgrids()
         @test ProductGs[1,1] == [G1[2],G2[3]]
     end
 
+    # subgrid of a subgrid
+    g1 = EquispacedGrid(10,-1,1)^2
+    @test mask(subgrid(subgrid(g1,(0.0..1.0)^2),UnitSimplex{2}()))==[i+j<6 for i in 1:5 , j in 1:5]
+
+    g1 = EquispacedGrid(10,0,1)^2
+    for x in g1[BitArray([i+j<12 for i in 1:10 , j in 1:10])]
+        @test x ∈ UnitSimplex{2}()
+    end
+
     C = UnitInterval()^2
     productgrid = subgrid(ProductG, C)
     refgrid = MaskedGrid(ProductG, C)
@@ -285,6 +294,14 @@ function test_subgrids()
     for x in g
         @test x ∈ support(g)
     end
+
+    for x in boundary(EquispacedGrid(100,-1,1)^2,UnitDisk())
+        @test norm(x)≈1
+    end
+
+    for x in  boundary(subgrid(EquispacedGrid(100,-1,1)^2,UnitDisk()),UnitDisk())
+        @test norm(x)≈1
+    end
 end
 end
 
@@ -313,12 +330,29 @@ function test_randomgrids()
         p2 = randompoint(box2)
         @test typeof(p2) == Float64
         @test p2 ∈ box2
+
+        g3 = randompoint(UnionDomain(0.0..1.5,1.5..2.0))
+        @test typeof(g3) == Float64
+        @test g3 ∈ 0.0..2.0
+
+        g3 = randompoint(IntersectionDomain(0.0..1.5,1.0..2.0))
+        @test typeof(g3) == Float64
+        @test g3 ∈ 1.0..1.5
+
+        g3 = randompoint(DifferenceDomain(0.0..1.5,1.0..2.0))
+        @test typeof(g3) == Float64
+        @test g3 ∈ 0.0..1.0
+
     end
 end
+using StaticArrays
+
 
 include("test_modcartesianindices.jl")
 
-
+include("test_boundingbox.jl")
+include("test_broadcast.jl")
+include("test_gauss.jl")
 test_subgrids()
 test_randomgrids()
 
@@ -328,4 +362,5 @@ test_randomgrids()
     plot(FourierGrid(4)× FourierGrid(4) )
     plot(FourierGrid(4)× FourierGrid(4) × FourierGrid(4) )
     plot(FourierGrid(4)× FourierGrid(4) ,rand(4,4))
+    plot(FourierGrid(4) ,rand(4))
 end
